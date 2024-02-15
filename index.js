@@ -2,9 +2,48 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors"; // use to link server(node/express) the frontend(react)
 import pg from "pg";
+import bcrypt from "bcrypt";
+import session from "express-session";
+import passport from "passport";
+import { Strategy } from "passport-local";
 
 const app = express();
 const port = 4000;
+const saltRounds = 10;
+const CLIENT_URI = "http://localhost:3000";
+// let temporaryUser;
+
+//Needed to send data // use to link server(node/express) the frontend(react)
+////////////////////////////////////////////////////////////
+const corsOptions = {
+  // origin: "*",
+  // credentials: true,
+  // optionSuccessStatus: 200
+  origin: "http://localhost:3000",
+  credentials: true,
+}
+
+app.use(cors(corsOptions));
+
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(session({
+    secret: "JDG",
+    resave: false,
+    saveUninitialized: true,
+        // domain: 'localhost:3000',
+    cookie: { //HOW LONG COOKIE WILL BE SAVE (1000 miliseconds = 1 second * 60 = 1 min * 60 = 1hr )
+      maxAge: 1000 * 60 * 60,
+      // httpOnly: true,
+      // secure: true,
+    }
+  })
+);
+
+//SHOULD BE AFTER the session is initialize/created
+app.use(passport.initialize());
+app.use(passport.session());
 
 const db = new pg.Client({
     user: "postgres",
@@ -15,19 +54,6 @@ const db = new pg.Client({
   });
 
 db.connect();
-
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(express.static("public"));
-
-//Needed to send data // use to link server(node/express) the frontend(react)
-////////////////////////////////////////////////////////////
-const corsOptions = {
-    origin: "*",
-    credentials: true,
-    optionSuccessStatus: 200
-}
-app.use(cors(corsOptions));
 
 //temporary array to save the value of database
 ////////////////////////////////////////////////////////////
@@ -80,9 +106,74 @@ async function deleteData(rcvd){
       }
 }
 
+//Below remove the authentication out of the post /login (can be reuse when authenticating)
+passport.use( "local",
+  //passport automatically calls the username/password in the body of the the req(form/whoever calls authentication)
+  new Strategy(async function verify(username, password, cb){
+    try {
+      const result = await db.query("SELECT * FROM user_cred WHERE user_email = $1", [
+        username,
+      ]);
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        const storedHashedPassword = user.user_pass;
+        bcrypt.compare(password, storedHashedPassword, (err, result) => {
+          if (err) {
+            //cb returns (error) if an error occurs in bcrypt.compare
+            return cb("Error comparing passwords:", err);
+          } else {
+            if (result) { //PASS authentication
+              //cb returns (noerror(null), user(const above))
+              // console.log("Authentication Passed!");
+              return cb(null, user);
+            } else { //FAIL authentication
+              //cb returns (noerror(null), false(user is not authenticated))
+              // console.log("Authentication Failed!");
+              return cb(null, false);
+            }
+          }
+        });
+      } else {
+        return cb("User not found");
+      }
+    } catch (err) {
+      return cb(err);
+    }
+  })
+);
+
+passport.serializeUser((user, cb) => {
+  cb(null, user);
+  console.log("serializeUser");
+  // console.log(user);
+});
+passport.deserializeUser((user, cb) => {
+  cb(null, user);
+  console.log("deserializeUser");
+});
+
 app.get("/", async (req,res)=>{
     data = await fetchData();//setting the value of data using fetchData (check fetchData)
     res.send(data);
+
+    // res.redirect(`${CLIENT_URI}/Home`);
+});
+
+app.get("/IsLogin", (req,res,)=>{
+  console.log("IsLogin");
+  console.log(req.isAuthenticated());
+  console.log(req.user);
+  req.isAuthenticated() ?
+  res.send(req.user) 
+  : res.send(null);
+});
+
+app.get("/Failed", (req,res)=>{
+  const auth = req.isAuthenticated();
+  console.log(auth);
+  console.log("IsFailed");
+  // console.log(temporaryUser);
+  res.send(null);
 });
 
 //ROUTE FOR ADDING DATA to the DATABASE
@@ -96,6 +187,81 @@ app.get("/", async (req,res)=>{
     addData(received);
     data = await fetchData();//setting the value of data using fetchData (check fetchData)
     res.send(data);
+});
+
+app.post("/Login", (req, res) => {passport.authenticate("local", {
+  successRedirect: "/IsLogin",
+  failureRedirect: "/IsFailed"
+})(req, res);
+}
+);
+
+// app.post("/Login", 
+// (req, res)=>{ passport.authenticate("local", function(err, user){
+//   if(user){
+//       // req.login(user, (err)=>{//needed for calling serialize and deserialize
+//       //   if (err){} else {  
+//       //   console.log(`Login under: ${user.user_email}`);//here data is from serializing
+//       //     temporaryUser=user;
+//       //     // res.send(user);
+//       //     res.redirect("/IsLogin");
+//       //   }
+//       // });
+//       req.login(user, ()=>{
+//         res.redirect("/IsLogin");
+//       });
+
+//       } else {
+//           console.log("Access denied!");
+//           res.send(null);
+//       }    
+// })(req, res);//passing req and res to passport
+// }
+// );
+
+app.post("/Register", async (req,res)=>{
+  const {username, password, fname, lname} = req.body;
+
+  try {
+    const checkResult = await db.query("SELECT * FROM user_cred WHERE user_email = $1", [
+      username,
+    ]);
+
+    if (checkResult.rows.length > 0) {
+      res.send(null);
+    } else {
+      //hashing the password and saving it in the database
+      bcrypt.hash(password, saltRounds, async (err, hash) => {
+        if (err) {
+          console.error("Error hashing password:", err);
+        } else {
+          console.log("Hashed Password:", hash);
+          //RETURNING * return the values after inserting into the database
+          const result = await db.query(
+            "INSERT INTO user_cred (user_email, user_pass, fname, lname) VALUES ($1, $2, $3, $4) RETURNING *",
+            [username, hash, fname, lname]
+          );
+          const user = result.rows[0];
+//calling req.login after saving data in the database
+          req.login(user, (err) => { //needed to authenticate and calling serialize and deserialize
+            if(err){
+              console.log("Authentication fail!");
+              console.log(err);
+            }
+            else{
+              console.log("Authentication success!");
+              temporaryUser=user;
+              res.send(user);
+            }  
+          })
+        }
+      });
+    }
+  } catch (err) {
+    console.log(err);
+  }
+
+console.log("Register initiated");
 });
 
 app.patch("/update", async (req,res)=>{
