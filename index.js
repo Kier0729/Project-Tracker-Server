@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import cors from "cors"; // use to link server(node/express) the frontend(react)
+import cors from "cors";
 import pg from "pg";
 import bcrypt from "bcrypt";
 import session from "express-session";
@@ -65,32 +65,30 @@ let data =[
 async function fetchData(month){
   try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
-      const result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY id ASC",[id, month]);
+      let result, nextMonth;
+      
+      if(month<12){
+        nextMonth = parseInt(month)+1;
+      } else if (month == 12) {
+        nextMonth = 1;
+      }
+      if(month == 13){result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) < $2 ORDER BY entry_date ASC",[id, month]);} 
+      else {result = await db.query(
+        // "SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY entry_date ASC"
+        `SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry 
+        WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= 7 
+        OR EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < 7 ORDER BY entry_date ASC`
+        ,[id, month, nextMonth]);}
       let myData=[];
       result.rows.forEach((items) => { //transferring each row data to myData array
            myData.push(items);
       });
+      console.log(`nextmonth: ${nextMonth}`);
       return myData; //return/pass myData value if fetchData is called
     } catch (error) {
       console.log(error.message);
     }
 }
-
-//for acquiring the data in the database for all months
-////////////////////////////////////////////////////////////
-// async function fetchData(){
-//   try{
-//       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
-//       const result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 ORDER BY id ASC",[id]);
-//       let myData=[];
-//       result.rows.forEach((items) => { //transferring each row data to myData array
-//            myData.push(items);
-//       });
-//       return myData; //return/pass myData value if fetchData is called
-//     } catch (error) {
-//       console.log(error.message);
-//     }
-// }
 
 async function addData(rcvd){
     try{
@@ -174,7 +172,23 @@ app.post("/fetch", async (req,res)=>{
         data = await fetchData(month);//setting the value of data using fetchData (check fetchData)
         console.log("fetch");
         res.send(data);
-    }  
+    } else {
+      res.send(null);
+    }
+});
+
+app.get("/year", async (req,res)=>{
+  console.log(`YEAR ${id}`);
+  let year = await db.query(
+    `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
+    FROM user_entry
+    WHERE entry_id = $1`, [id]
+    );
+    let myData=[];
+      year.rows.forEach((items) => { //transferring each row data to myData array
+           myData.push(items.date);
+      });
+    res.send(myData);
 });
 
 app.get("/IsLogin", (req,res,)=>{
