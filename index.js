@@ -62,28 +62,30 @@ let data =[
 
 //for acquiring the data in the database
 ////////////////////////////////////////////////////////////
-async function fetchData(month){
+async function fetchData(receieved){
   try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
-      let result, nextMonth;
+      let result, nextMonth, nextYear;
       
-      if(month<12){
-        nextMonth = parseInt(month)+1;
-      } else if (month == 12) {
+      if(receieved.month<12){
+        nextMonth = parseInt(receieved.month)+1;
+        nextYear = parseInt(receieved.year)
+      } 
+      else if (receieved.month == 12){
         nextMonth = 1;
-      }
-      if(month == 13){result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) < $2 ORDER BY entry_date ASC",[id, month]);} 
+        nextYear = parseInt(receieved.year)+1;
+      } 
+      if(receieved.month == 13){result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) < $2 AND EXTRACT(YEAR FROM entry_date) = $3 ORDER BY entry_date ASC",[id, receieved.month, receieved.year]);} 
       else {result = await db.query(
         // "SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY entry_date ASC"
         `SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry 
-        WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= 7 
-        OR EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < 7 ORDER BY entry_date ASC`
-        ,[id, month, nextMonth]);}
+        WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= $4 AND EXTRACT(YEAR FROM entry_date) = $5
+        OR EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < $4 AND EXTRACT(YEAR FROM entry_date) = $6 ORDER BY entry_date ASC`
+        ,[id, receieved.month, nextMonth, receieved.cycle, receieved.year, nextYear]);}
       let myData=[];
       result.rows.forEach((items) => { //transferring each row data to myData array
            myData.push(items);
       });
-      console.log(`nextmonth: ${nextMonth}`);
       return myData; //return/pass myData value if fetchData is called
     } catch (error) {
       console.log(error.message);
@@ -156,7 +158,6 @@ passport.use( "local",
 passport.serializeUser((user, cb) => {
   cb(null, user);
   console.log("serializeUser");
-  // console.log(user);
 });
 passport.deserializeUser((user, cb) => {
   cb(null, user);
@@ -165,12 +166,11 @@ passport.deserializeUser((user, cb) => {
 
 app.post("/fetch", async (req,res)=>{
     console.log("/fetch");
-    const month = req.body.selectedMonth;
-    console.log(month);
-    console.log(id);
+    console.log(req.body);
+    const {month, cycle, year} = req.body;
+    const receieved = {month:month, cycle:cycle, year:year};
     if(req.user){
-        data = await fetchData(month);//setting the value of data using fetchData (check fetchData)
-        console.log("fetch");
+        data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
         res.send(data);
     } else {
       res.send(null);
@@ -178,11 +178,11 @@ app.post("/fetch", async (req,res)=>{
 });
 
 app.get("/year", async (req,res)=>{
-  console.log(`YEAR ${id}`);
   let year = await db.query(
     `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
-    FROM user_entry
-    WHERE entry_id = $1`, [id]
+    FROM user_entry 
+    WHERE entry_id = $1  
+    ORDER BY date DESC`, [id]
     );
     let myData=[];
       year.rows.forEach((items) => { //transferring each row data to myData array
@@ -204,7 +204,6 @@ app.get("/IsLogin", (req,res,)=>{
 app.get("/IsFailed", (req,res)=>{
   console.log("IsFailed");
   console.log(req.isAuthenticated());
-  // console.log(req.user);
   res.send({...req.user, notFound:"No Match"});
 });
 
@@ -227,7 +226,7 @@ app.get("/Logout", (req, res)=>{
 
     const received = req.body;
     addData(received);
-      data = await fetchData(received.selectedMonth);//setting the value of data using fetchData (check fetchData)   
+      data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)   
       res.send(data);
     });
 
@@ -313,7 +312,7 @@ app.patch("/update", async (req,res)=>{
 
     const received = req.body;
     updateData(received);
-    data = await fetchData(received.selectedMonth);//setting the value of data using fetchData (check fetchData)
+    data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
     res.send(data);
 });
 
@@ -323,9 +322,8 @@ app.delete("/delete", async (req,res)=>{
     // data = data.filter(function(item, index){return(index != id)});
     // res.send(data);
     const received = req.body;
-    console.log(received);
     deleteData(received);
-    data = await fetchData(received.selectedMonth);//setting the value of data using fetchData (check fetchData)
+    data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
     res.send(data);
 });
 
