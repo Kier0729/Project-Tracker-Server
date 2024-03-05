@@ -12,6 +12,6 @@ CREATE TABLE user_entry(
 	entry_id INTEGER REFERENCES user_cred(id),
 	entry_date DATE,
 	entry_merchant TEXT,
-	entry_amount DOUBLE
+	entry_amount FLOAT
 );
 
