@@ -13,9 +13,10 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-let id;
+
 env.config();
 
+//commented this because i decided to use proxy
 //Needed to send data // use to link server(node/express) the frontend(react) different
 ////////////////////////////////////////////////////////////
 // const corsOptions = {
@@ -56,6 +57,7 @@ const db = new pg.Client({
 
 db.connect();
 
+let id;
 //temporary array to save the value of database
 ////////////////////////////////////////////////////////////
 let data =[
@@ -64,12 +66,51 @@ let data =[
     // {date: "12/31/2023", merchant: "SM Dept", amount: "3.00"}
 ];
 let adminData =[];
+let dataOption =[];
+
+let year = [];
+
+  async function fetchYear(){
+    let myData=[];
+    console.log("fetchYear");
+      return Promise.all(dataOption.id.map(async items =>{
+      const result = await db.query(
+        `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
+        FROM user_entry 
+        WHERE entry_id = $1  
+        ORDER BY date DESC`, [items]
+        );
+          result.rows.forEach(items =>{
+          year.push(items.date);
+        })
+        return year;
+    })
+    )
+  }
+
+//to check if the selected user has data saved in the database
+async function hasData(receieved){
+  let myData=[];
+  try{
+    return Promise.all(receieved.id.map( async items =>{
+      const result = await db.query("SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 ORDER BY entry_date ASC",[items]);
+      result.rows.forEach((item) => { //transferring each row data to myData array
+        myData.push(item);    
+     });
+      return myData; 
+    }));
+  } catch(error){
+    console.log(error.message);
+    return [""];
+  }
+}
 
 //for acquiring the data in the database
 ////////////////////////////////////////////////////////////
 async function fetchData(receieved){
   console.log("fetchdata");
   console.log(id);
+  console.log(receieved);
   try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
       let result, nextMonth, nextYear;
@@ -87,7 +128,7 @@ async function fetchData(receieved){
         // "SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY entry_date ASC"
         `SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry 
         WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= $4 AND EXTRACT(YEAR FROM entry_date) = $5
-        OR EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < $4 AND EXTRACT(YEAR FROM entry_date) = $6 ORDER BY entry_date ASC`
+        OR entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < $4 AND EXTRACT(YEAR FROM entry_date) = $6 ORDER BY entry_date ASC`
         ,[id, receieved.month, nextMonth, receieved.cycle, receieved.year, nextYear]);}
       let myData=[];
       result.rows.forEach((items) => { //transferring each row data to myData array
@@ -99,7 +140,7 @@ async function fetchData(receieved){
     }
 }
 
-async function fetchDataAdmin(receieved){
+async function updateDataAdmin(receieved){
   //get id in receieved
     try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
@@ -112,30 +153,44 @@ async function fetchDataAdmin(receieved){
       else if (receieved.month == 12){
         nextMonth = 1;
         nextYear = parseInt(receieved.year)+1;
-      } 
-      if(receieved.month == 13){result = await db.query(`
-      SELECT user_cred.fname, user_cred.lname, user_entry.id, entry_id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount 
-      FROM user_entry
-      JOIN user_cred ON user_cred.id = user_entry.entry_id
-      WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) < $2 AND EXTRACT(YEAR FROM entry_date) = $3 
-      ORDER BY entry_date ASC`,[receieved.id, receieved.month, receieved.year]);
+      }
 
-    } 
-      else {result = await db.query(
-        // "SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY entry_date ASC"
-        `SELECT user_cred.fname, user_cred.lname, user_entry.id, entry_id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount 
-        FROM user_entry 
-        JOIN user_cred ON user_cred.id = user_entry.entry_id 
-        WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= $4 AND EXTRACT(YEAR FROM entry_date) = $5 
-        OR EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < $4 AND EXTRACT(YEAR FROM entry_date) = $6 
-        ORDER BY entry_date ASC`
-        ,[receieved.id, receieved.month, nextMonth, receieved.cycle, receieved.year, nextYear]);
-        let myData=[];
+//need to put .map inside a return Promise.all to return a value for async/await
+let myData=[];      
+return Promise.all(receieved.id.map( async items =>{
+          
+          if(receieved.month == 13){
+        result = await db.query(`
+        SELECT user_cred.fname, user_cred.lname, user_entry.id, entry_id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount 
+        FROM user_entry
+        JOIN user_cred ON user_cred.id = user_entry.entry_id
+        WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) < $2 AND EXTRACT(YEAR FROM entry_date) = $3 
+        ORDER BY entry_date ASC`,[items, receieved.month, receieved.year]);
         result.rows.forEach((items) => { //transferring each row data to myData array
-           myData.push(items);
-      });
-      return myData; //return/pass myData value if fetchData is called
-          }   
+          myData.push(items);
+          adminData.push(items);
+       });
+       return myData;
+      } 
+        else {
+          result = await db.query(
+          // "SELECT id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount FROM user_entry WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 ORDER BY entry_date ASC"
+          `SELECT user_cred.fname, user_cred.lname, user_entry.id, entry_id, TO_CHAR(entry_date, 'MM/DD/YYYY') AS date, entry_merchant AS merchant, entry_amount AS amount 
+          FROM user_entry 
+          JOIN user_cred ON user_cred.id = user_entry.entry_id 
+          WHERE entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $2 AND EXTRACT(DAY FROM entry_date) >= $4 AND EXTRACT(YEAR FROM entry_date) = $5 
+          OR entry_id = $1 AND EXTRACT(MONTH FROM entry_date) = $3 AND EXTRACT(DAY FROM entry_date) < $4 AND EXTRACT(YEAR FROM entry_date) = $6 
+          ORDER BY entry_date ASC`
+          ,[items, receieved.month, nextMonth, receieved.cycle, receieved.year, nextYear]);
+          result.rows.forEach((items) => { //transferring each row data to myData array
+             myData.push(items);
+             adminData.push(items);
+          });
+        //if myData below will be set to return it will wait for the cycle of receieved.id.map above, before returning the value to promise.all 
+        return myData; //return/pass myData value if fetchData is called
+            }
+        })  
+      );
     } catch (error) {
       console.log(error.message);
     }
@@ -266,7 +321,6 @@ passport.use(
     }
     ));
 
-
 passport.serializeUser((user, cb) => {
   cb(null, user);
   console.log("serializeUser");
@@ -280,24 +334,43 @@ app.post("/fetch", async (req,res)=>{
     console.log("/fetch");
     const {month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
-    if(req.user){
+    if(dataOption.id){
+      adminData = [];
+      dataOption = {id:dataOption.id, month:month, cycle:cycle, year:year}
+      let myData;
+      myData = await updateDataAdmin(dataOption);
+//either send myData/adminData who has same value  
+    res.send(adminData);
+    }
+    else{
+      if(req.user){
         data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
         res.send(data);
     } else {
       res.send(null);
     }
+    }
 });
 
-app.post("/fetchDataAdmin", async (req,res)=>{
+//fetch adminData by clicking view
+app.post("/updateDataAdmin", async (req,res)=>{
+    adminData = [];
+    dataOption = [];
+    year = [];
     let myData;
-    let receieved = {id:req.body.id, cycle:7, month:2, year: 2024};
-    myData = await fetchDataAdmin(receieved);
-  res.send(myData);
+    let receieved = {id:req.body.id, cycle:req.body.cycle, month:req.body.selectedMonth, year: req.body.selectedYear};
+    dataOption = receieved;
+    console.log(receieved);
+    myData = await updateDataAdmin(receieved);
+//either send myData/adminData who has same value  
+    res.send(adminData);
 });
 
-app.post("/updateDataAdmin", (req,res)=>{
-  console.log("updateDataAdmin");
-  console.log(req.body);
+app.get("/fetchDataAdmin", async (req,res)=>{
+  console.log("fetchDataAdmin");
+  adminData = [];
+  let myData = [];
+  myData = await updateDataAdmin(dataOption);
   res.send(adminData);
 });
 
@@ -305,14 +378,28 @@ app.get("/fetchAdmin", async (req,res)=>{
   if(req.user){
       data = await fetchAdmin();//setting the value of data using fetchData (check fetchData)
       console.log("fetchAdmin");
-      res.send(data);
+      res.send({listUser:data});
+  } else {
+    res.send(null);
+  }
+});
+
+app.post("/toNavigate", async (req,res)=>{
+if(req.user){
+    let data = await hasData(req.body);
+    console.log("toNavigate");
+    res.send(data);
   } else {
     res.send(null);
   }
 });
 
 app.get("/year", async (req,res)=>{
-  let year = await db.query(
+  console.log("/year"); 
+  if(!dataOption.id){
+    let year;
+    console.log("!option")
+    year = await db.query(
     `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
     FROM user_entry 
     WHERE entry_id = $1  
@@ -320,9 +407,35 @@ app.get("/year", async (req,res)=>{
     );
     let myData=[];
       year.rows.forEach((items) => { //transferring each row data to myData array
-           myData.push(items.date);
+      myData.push(items.date);
       });
     res.send(myData);
+  } 
+  else {
+    console.log(dataOption);
+    console.log("option.id");
+    let data = [];
+    let myData = [];
+    year = [];
+    data = await fetchYear();
+    
+    year = year.sort();
+    year = year.reverse();
+    if(year.length > 1){
+      let y = 1;
+      for(let x=0; x < year.length; x++){
+        year[x] != year[y] && myData.push(year[x]);
+        if (y == year.length-1) { 
+          myData.push(year[y]);
+          x++;
+        }
+        else if (y < year.length-1){y++}     
+    }
+    } else {
+      myData.push(year);
+    }
+    res.send(myData);
+  }
 });
 
 app.get("/IsLogin", (req,res,)=>{
@@ -347,11 +460,8 @@ app.get("/IsLoginGoogle", (req,res,)=>{
 
 app.get("/auth/google", 
 passport.authenticate("google", {
-  scope: ["profile", "email"],
-})
-// (req, res)=>{
-//   console.log("google");
-// }
+    scope: ["profile", "email"],
+  })
 );
 
 app.get(
@@ -381,6 +491,9 @@ app.get("/IsFailed", (req,res)=>{
 });
 
 app.get("/Logout", (req, res)=>{
+  data =[];
+  adminData =[];
+  dataOption =[];
   setTimeout(()=>{
     req.logout(()=>{
     console.log("User Logout!");
@@ -419,20 +532,6 @@ app.post("/Login", async (req, res) => {
   }, 300);
   
 });
-
-// app.post("/Login", 
-// (req, res)=>{ passport.authenticate("local", function(err, user){
-//   if(user){
-//       req.login(user, ()=>{ //needed for calling serialize and deserialize
-//         res.redirect("/IsLogin");
-//       });
-//       } else {
-//           console.log("Access denied!");
-//           res.send(null);
-//       }    
-// })(req, res);//passing req and res to passport
-// }
-// );
 
 app.post("/Register", async (req,res)=>{
   setTimeout(async() => {
