@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: "JDG",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: { //HOW LONG COOKIE WILL BE SAVE (1000 miliseconds = 1 second * 60 = 1 min * 60 = 1hr )
@@ -48,11 +48,12 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const db = new pg.Client({
-    user: "postgres",
-    host: "localhost",
-    database: "tracker",
-    password: "qwerty1234",
-    port: 5432,
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+    connectionString: process.env.DB_CONNECTION_STRING,// needed for remote db connection
   });
 
 db.connect();
@@ -134,6 +135,7 @@ async function fetchData(receieved){
       result.rows.forEach((items) => { //transferring each row data to myData array
            myData.push(items);
       });
+      // console.log(result.rows);
       return myData; //return/pass myData value if fetchData is called
     } catch (error) {
       console.log(error.message);
@@ -310,8 +312,8 @@ passport.use(
   passport.use(
     "facebook",
     new FacebookStrategy({
-    clientID: "7157850597665688",
-    clientSecret: "b6bdc5a453653301d5d9e220a9f60d97",
+    clientID: process.env.FACEBOOK_CLIENT_ID,
+    clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     callbackURL: "http://localhost:4000/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
