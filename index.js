@@ -301,7 +301,7 @@ passport.use(
   new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:4000/auth/google/home",
+  callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 },  
   async function (request, accessToken, refreshToken, profile, cb){
@@ -314,7 +314,7 @@ passport.use(
     new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    callbackURL: "http://localhost:4000/auth/facebook/Home",
+    callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
 },  
@@ -330,6 +330,12 @@ passport.serializeUser((user, cb) => {
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
+});
+
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
 });
 
 app.post("/fetch", async (req,res)=>{
