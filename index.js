@@ -301,8 +301,8 @@ passport.use(
   new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:4000/auth/google/home",
-  // callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
+  // callbackURL: "http://localhost:4000/auth/google/home",
+  callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 },  
   async function (request, accessToken, refreshToken, profile, cb){
@@ -315,8 +315,8 @@ passport.use(
     new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    callbackURL: "http://localhost:4000/auth/facebook/Home",
-    // callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
+    // callbackURL: "http://localhost:4000/auth/facebook/Home",
+    callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
 },  
