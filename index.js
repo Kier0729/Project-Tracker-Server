@@ -23,6 +23,7 @@ const corsOptions = {
   // origin: "*",
   // credentials: true,
   // optionSuccessStatus: 200
+  // origin: "http://localhost:3000",
   origin: "https://project-tracker-8zss.onrender.com",
   // methods: "GET, POST, PATCH, PUT, DELETE",
   credentials: true,
@@ -278,11 +279,11 @@ passport.use( "local",
           } else {
             if (result) { //PASS authentication
               //cb returns (noerror(null), user(const above))
-              // console.log("Authentication Passed!");
+              console.log("Authentication Passed!");
               return cb(null, user);
             } else { //FAIL authentication
               //cb returns (noerror(null), false(user is not authenticated))
-              // console.log("Authentication Failed!");
+              console.log("Authentication Failed!");
               return cb(err, false);
             }
           }
@@ -328,10 +329,12 @@ passport.use(
 passport.serializeUser((user, cb) => {
   cb(null, user);
   console.log("serializeUser");
+  console.log(user);
 });
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
+  console.log(user);
 });
 
 app.post("/fetch", async (req,res)=>{
@@ -444,6 +447,7 @@ app.get("/year", async (req,res)=>{
 
 app.get("/IsLogin", (req,res,)=>{
   console.log("IsLogin");
+  console.log(req.user);
   if(req.isAuthenticated()){
     id = req.user.id;
     res.send(req.user);
@@ -457,6 +461,7 @@ app.get("/IsLoginGoogle", (req,res,)=>{
   if(req.isAuthenticated()){
     id = req.user.id;
     res.redirect("https://project-tracker-8zss.onrender.com/Home");
+    // res.redirect("http://localhost:3000");
   } else {
     console.log(req.user);
   }
