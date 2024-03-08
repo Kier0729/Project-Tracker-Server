@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-// import cors from "cors";
+import cors from "cors";
 import pg from "pg";
 import bcrypt from "bcrypt";
 import session from "express-session";
@@ -19,16 +19,16 @@ env.config();
 //commented this because i decided to use proxy
 //Needed to send data // use to link server(node/express) the frontend(react) different
 ////////////////////////////////////////////////////////////
-// const corsOptions = {
-//   // origin: "*",
-//   // credentials: true,
-//   // optionSuccessStatus: 200
-//   origin: "http://localhost:3000",
-//   // methods: "GET, POST, PATCH, PUT, DELETE",
-//   credentials: true,
-// }
+const corsOptions = {
+  // origin: "*",
+  // credentials: true,
+  // optionSuccessStatus: 200
+  origin: "https://project-tracker-8zss.onrender.com",
+  // methods: "GET, POST, PATCH, PUT, DELETE",
+  credentials: true,
+}
 
-// app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -301,7 +301,8 @@ passport.use(
   new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
+  callbackURL: "http://localhost:4000/auth/google/home",
+  // callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 },  
   async function (request, accessToken, refreshToken, profile, cb){
@@ -314,7 +315,8 @@ passport.use(
     new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
+    callbackURL: "http://localhost:4000/auth/facebook/Home",
+    // callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
 },  
@@ -330,12 +332,6 @@ passport.serializeUser((user, cb) => {
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
-});
-
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000"); // update to match the domain you will make the request from
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
 });
 
 app.post("/fetch", async (req,res)=>{
@@ -460,7 +456,7 @@ app.get("/IsLoginGoogle", (req,res,)=>{
   console.log("IsLoginGoogle");
   if(req.isAuthenticated()){
     id = req.user.id;
-    res.redirect("http://localhost:3000");
+    res.redirect("https://project-tracker-8zss.onrender.com/Home");
   } else {
     console.log(req.user);
   }
