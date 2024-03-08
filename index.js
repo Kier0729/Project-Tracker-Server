@@ -279,7 +279,19 @@ passport.use( "local",
           } else {
             if (result) { //PASS authentication
               //cb returns (noerror(null), user(const above))
-              console.log("Authentication Passed!");
+
+              req.login(user, (err) => { //needed to authenticate and calling serialize and deserialize
+                if(err){
+                  console.log("Authentication fail!");
+                  console.log(err);
+                }
+                else{
+                  console.log("Authentication success!");
+                  // res.redirect("/IsLogin");
+                }  
+              })
+
+              // console.log("Authentication Passed!");
               return cb(null, user);
             } else { //FAIL authentication
               //cb returns (noerror(null), false(user is not authenticated))
