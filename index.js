@@ -45,6 +45,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.set("trust proxy", 1);
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
