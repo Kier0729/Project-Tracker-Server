@@ -31,6 +31,7 @@ const corsOptions = {
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "https://project-tracker-8zss.onrender.com"); // update to match the domain you will make the request from
+  // res.header("Access-Control-Allow-Origin", "http://localhost:3000");
   res.header(
       "Access-Control-Allow-Headers",
       "Origin, X-Requested-With, Content-Type, Accept"
@@ -289,19 +290,7 @@ passport.use( "local",
           } else {
             if (result) { //PASS authentication
               //cb returns (noerror(null), user(const above))
-
-              req.login(user, (err) => { //needed to authenticate and calling serialize and deserialize
-                if(err){
-                  console.log("Authentication fail!");
-                  console.log(err);
-                }
-                else{
-                  console.log("Authentication success!");
-                  // res.redirect("/IsLogin");
-                }  
-              })
-
-              // console.log("Authentication Passed!");
+              console.log("Authentication Passed!");
               return cb(null, user);
             } else { //FAIL authentication
               //cb returns (noerror(null), false(user is not authenticated))
@@ -351,12 +340,12 @@ passport.use(
 passport.serializeUser((user, cb) => {
   cb(null, user);
   console.log("serializeUser");
-  console.log(user);
+  // console.log(user);
 });
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
-  console.log(user);
+  // console.log(user);
 });
 
 app.post("/fetch", async (req,res)=>{
@@ -427,7 +416,8 @@ app.get("/year", async (req,res)=>{
   console.log("/year"); 
   if(!dataOption.id){
     let year;
-    console.log("!option")
+    console.log("!option");
+    console.log(dataOption);
     year = await db.query(
     `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
     FROM user_entry 
@@ -463,6 +453,7 @@ app.get("/year", async (req,res)=>{
     } else {
       myData.push(year);
     }
+    console.log(myData);
     res.send(myData);
   }
 });
