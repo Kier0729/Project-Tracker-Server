@@ -45,8 +45,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.set("trust proxy", "https://project-tracker-8zss.onrender.com");
-// app.enable('trust proxy');
+// app.set("trust proxy", 1);
+app.enable("trust proxy");
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
