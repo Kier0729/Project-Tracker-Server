@@ -352,6 +352,17 @@ passport.deserializeUser((user, cb) => {
   // console.log(user);
 });
 
+app.get("/Home", (req,res,)=>{
+  console.log("/Home");
+  if(req.isAuthenticated()){
+    id = req.user.id;
+    res.redirect("https://project-tracker-8zss.onrender.com/Home");
+    // res.redirect("http://localhost:3000");
+  } else {
+    console.log(req.user);
+  }
+});
+
 app.post("/fetch", async (req,res)=>{
     console.log("/fetch");
     const {month, cycle, year} = req.body;
