@@ -352,7 +352,7 @@ passport.deserializeUser((user, cb) => {
   // console.log(user);
 });
 
-app.get("/Home", (req,res,)=>{
+app.get("https://project-tracker-8zss.onrender.com/Home", (req,res,)=>{
   console.log("/Home");
   if(req.isAuthenticated()){
     id = req.user.id;
