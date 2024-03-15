@@ -100,6 +100,7 @@ let data =[
 let adminData = [];
 let adminOption = [];
 let clientOption = [];
+let selectedItem = null;
 let year = [];
 
   async function fetchYear(){
@@ -360,16 +361,18 @@ passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
 });
+app.post("/postSelectedItem", (req,res)=>{
+  selectedItem = req.body;
+});
 
 app.get("/fetchOption", (req,res)=>{
-  res.send(clientOption);
+  res.send({clientOption, selectedItem});
 });
 
 app.post("/fetch", async (req,res)=>{
     const {toNavigate, month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
     if(adminOption.id){
-      console.log("AdminUser");
       adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
       let myData;
       myData = await updateDataAdmin(adminOption);
@@ -377,7 +380,6 @@ app.post("/fetch", async (req,res)=>{
     res.send(adminData);
     }
     else{
-      console.log("ClientUser");
       if(req.user){
         clientOption = receieved;
         data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
