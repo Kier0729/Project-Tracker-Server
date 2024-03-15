@@ -386,7 +386,7 @@ app.post("/fetch", async (req,res)=>{
 });
 
 //fetch adminData by clicking view
-app.post("/updateDataAdmin", async (req,res)=>{
+app.post("/postFetchAdminData&Option", async (req,res)=>{
     adminOption = [];
     year = [];
     let myData;
@@ -397,7 +397,7 @@ app.post("/updateDataAdmin", async (req,res)=>{
     res.send(adminData);
 });
 
-app.get("/fetchDataAdmin", async (req,res)=>{
+app.get("/fetchAdminOption", async (req,res)=>{
   res.send({adminOption:adminOption});
 });
 
@@ -524,19 +524,6 @@ app.get("/Logout", (req, res)=>{
 }, 300);
 });
 
-//ROUTE FOR ADDING DATA to the DATABASE
-////////////////////////////////////////////////////////
- app.post("/", async (req,res)=>{
-    // const {date, merchant, amount} = req.body;
-    // data = [...data, {date:date, merchant:merchant, amount:amount}];
-    // res.send(data);
-
-    const received = req.body;
-    addData(received);
-      data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)   
-      res.send(data);
-    });
-
 app.post("/Login", async (req, res) => {
   setTimeout(async() => {
     const result = await db.query("SELECT * FROM user_cred WHERE user_email = $1", [
@@ -598,15 +585,34 @@ console.log("Register initiated");
   }, 300);
 });
 
+//ROUTE FOR ADD/PATCH/DELETE DATA to the DATABASE
+////////////////////////////////////////////////////////
+app.post("/", async (req,res)=>{
+  // const {date, merchant, amount} = req.body;
+  // data = [...data, {date:date, merchant:merchant, amount:amount}];
+  // res.send(data);
+  const received = req.body;
+  try {
+    addData(received);
+    // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)   
+    res.send("Saved Successfully!");
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
 app.patch("/update", async (req,res)=>{
     // const {id,date,merchant,amount} = req.body;
     // data.splice(id,1,{date: date, merchant: merchant, amount: amount});
     // res.send(data);
-
     const received = req.body;
+  try {
     updateData(received);
     // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
-    res.send("Update saved");
+    res.send("Updated Successfully!");
+  } catch (error) {
+    res.send(error.message);
+  }
 });
 
 app.delete("/delete", async (req,res)=>{
@@ -615,10 +621,15 @@ app.delete("/delete", async (req,res)=>{
     // data = data.filter(function(item, index){return(index != id)});
     // res.send(data);
     const received = req.body;
+  try {
     deleteData(received);
-    data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
-    res.send(data);
+    // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
+    res.send("Deleted Successfully!");
+  } catch (error) {
+    res.send(error.message);
+  }
 });
+////////////////////////////////////////////////////////
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
