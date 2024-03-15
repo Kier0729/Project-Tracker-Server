@@ -46,6 +46,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// insert before session
 // app.set("trust proxy", 1);
 !development && app.enable("trust proxy");
 
@@ -368,6 +369,7 @@ app.post("/fetch", async (req,res)=>{
     const {toNavigate, month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
     if(adminOption.id){
+      console.log("AdminUser");
       adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
       let myData;
       myData = await updateDataAdmin(adminOption);
@@ -375,6 +377,7 @@ app.post("/fetch", async (req,res)=>{
     res.send(adminData);
     }
     else{
+      console.log("ClientUser");
       if(req.user){
         clientOption = receieved;
         data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
@@ -385,25 +388,19 @@ app.post("/fetch", async (req,res)=>{
     }
 });
 
-//fetch adminData by clicking view
+//fetch adminData by clicking view // cannot be used besides view button because req.body.id is only present after clicking view button
 app.post("/postFetchAdminData&Option", async (req,res)=>{
-    adminOption = [];
     year = [];
     let myData;
     let receieved = {id:req.body.id, cycle:req.body.cycle, month:req.body.selectedMonth, year: req.body.selectedYear, toNavigate: req.body.toNavigate};
     adminOption = receieved;
-    myData = await updateDataAdmin(receieved);
+    myData = await updateDataAdmin(adminOption);
 //either send myData/adminData who has same value  
     res.send(adminData);
 });
 
 app.get("/fetchAdminOption", async (req,res)=>{
   res.send({adminOption:adminOption});
-});
-
-app.post("/AdminHome", async (req,res)=>{
-  const {toNavigate, month, cycle, year} = req.body;
-  adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
 });
 
 app.get("/fetchAdmin", async (req,res)=>{
