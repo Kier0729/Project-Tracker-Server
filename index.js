@@ -13,6 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
+const development = true;
 
 env.config();
 
@@ -24,7 +25,7 @@ const corsOptions = {
   // credentials: true,
   // optionSuccessStatus: 200
   // origin: "http://localhost:3000",
-  origin: "https://project-tracker-8zss.onrender.com",
+  origin: development ? "http://localhost:3000" : "https://project-tracker-8zss.onrender.com",
   // methods: "GET, POST, PATCH, PUT, DELETE",
   credentials: true,
 }
@@ -46,8 +47,10 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // app.set("trust proxy", 1);
-app.enable("trust proxy");
-app.use(session({
+!development && app.enable("trust proxy");
+
+if (!development){
+  app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
@@ -57,7 +60,18 @@ app.use(session({
       secure: true,
     },  
   })
-);
+  );
+} else if (development) {
+  app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { //HOW LONG COOKIE WILL BE SAVE (1000 miliseconds = 1 second * 60 = 1 min * 60 = 1hr )
+      maxAge: 1000 * 60 * 60,
+    },  
+  })
+  );
+}
 
 //SHOULD BE AFTER the session is initialize/created
 app.use(passport.initialize());
@@ -82,15 +96,14 @@ let data =[
     // {date: "02/02/2024", merchant: "Lazada", amount: "2.00"},
     // {date: "12/31/2023", merchant: "SM Dept", amount: "3.00"}
 ];
-let adminData =[];
-let dataOption =[];
-
+let adminData = [];
+let adminOption = [];
+let clientOption = [];
 let year = [];
 
   async function fetchYear(){
     let myData=[];
-    console.log("fetchYear");
-      return Promise.all(dataOption.id.map(async items =>{
+      return Promise.all(adminOption.id.map(async items =>{
       const result = await db.query(
         `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
         FROM user_entry 
@@ -125,9 +138,6 @@ async function hasData(receieved){
 //for acquiring the data in the database
 ////////////////////////////////////////////////////////////
 async function fetchData(receieved){
-  console.log("fetchdata");
-  console.log(id);
-  console.log(receieved);
   try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
       let result, nextMonth, nextYear;
@@ -151,7 +161,6 @@ async function fetchData(receieved){
       result.rows.forEach((items) => { //transferring each row data to myData array
            myData.push(items);
       });
-      // console.log(result.rows);
       return myData; //return/pass myData value if fetchData is called
     } catch (error) {
       console.log(error.message);
@@ -159,6 +168,7 @@ async function fetchData(receieved){
 }
 
 async function updateDataAdmin(receieved){
+  adminData = [];
   //get id in receieved
     try{
       //TO_CHAR(entry_date, 'MM/DD/YYYY') AS date to get the date and set date format in postgresql
@@ -318,7 +328,7 @@ passport.use(
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   // callbackURL: "http://localhost:4000/auth/google/home",
-  callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
+  callbackURL: development ? "http://localhost:4000/auth/google/home" : "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 },  
   async function (request, accessToken, refreshToken, profile, cb){
@@ -332,7 +342,7 @@ passport.use(
     clientID: process.env.FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     // callbackURL: "http://localhost:4000/auth/facebook/Home",
-    callbackURL: "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
+    callbackURL: development ? "http://localhost:4000/auth/facebook/Home" : "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
 },  
@@ -344,28 +354,29 @@ passport.use(
 passport.serializeUser((user, cb) => {
   cb(null, user);
   console.log("serializeUser");
-  // console.log(user);
 });
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
-  // console.log(user);
+});
+
+app.get("/fetchOption", (req,res)=>{
+  res.send(clientOption);
 });
 
 app.post("/fetch", async (req,res)=>{
-    console.log("/fetch");
-    const {month, cycle, year} = req.body;
+    const {toNavigate, month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
-    if(dataOption.id){
-      adminData = [];
-      dataOption = {id:dataOption.id, month:month, cycle:cycle, year:year}
+    if(adminOption.id){
+      adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
       let myData;
-      myData = await updateDataAdmin(dataOption);
+      myData = await updateDataAdmin(adminOption);
 //either send myData/adminData who has same value  
     res.send(adminData);
     }
     else{
       if(req.user){
+        clientOption = receieved;
         data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
         res.send(data);
     } else {
@@ -376,30 +387,28 @@ app.post("/fetch", async (req,res)=>{
 
 //fetch adminData by clicking view
 app.post("/updateDataAdmin", async (req,res)=>{
-    adminData = [];
-    dataOption = [];
+    adminOption = [];
     year = [];
     let myData;
-    let receieved = {id:req.body.id, cycle:req.body.cycle, month:req.body.selectedMonth, year: req.body.selectedYear};
-    dataOption = receieved;
-    console.log(receieved);
+    let receieved = {id:req.body.id, cycle:req.body.cycle, month:req.body.selectedMonth, year: req.body.selectedYear, toNavigate: req.body.toNavigate};
+    adminOption = receieved;
     myData = await updateDataAdmin(receieved);
 //either send myData/adminData who has same value  
     res.send(adminData);
 });
 
 app.get("/fetchDataAdmin", async (req,res)=>{
-  console.log("fetchDataAdmin");
-  adminData = [];
-  let myData = [];
-  myData = await updateDataAdmin(dataOption);
-  res.send(adminData);
+  res.send({adminOption:adminOption});
+});
+
+app.post("/AdminHome", async (req,res)=>{
+  const {toNavigate, month, cycle, year} = req.body;
+  adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
 });
 
 app.get("/fetchAdmin", async (req,res)=>{
   if(req.user){
       data = await fetchAdmin();//setting the value of data using fetchData (check fetchData)
-      console.log("fetchAdmin");
       res.send({listUser:data});
   } else {
     res.send(null);
@@ -409,7 +418,6 @@ app.get("/fetchAdmin", async (req,res)=>{
 app.post("/toNavigate", async (req,res)=>{
 if(req.user){
     let data = await hasData(req.body);
-    console.log("toNavigate");
     res.send(data);
   } else {
     res.send(null);
@@ -417,11 +425,8 @@ if(req.user){
 });
 
 app.get("/year", async (req,res)=>{
-  console.log("/year"); 
-  if(!dataOption.id){
+  if(!adminOption.id){
     let year;
-    console.log("!option");
-    console.log(dataOption);
     year = await db.query(
     `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
     FROM user_entry 
@@ -435,8 +440,6 @@ app.get("/year", async (req,res)=>{
     res.send(myData);
   } 
   else {
-    console.log(dataOption);
-    console.log("option.id");
     let data = [];
     let myData = [];
     year = [];
@@ -457,14 +460,11 @@ app.get("/year", async (req,res)=>{
     } else {
       myData.push(year);
     }
-    console.log(myData);
     res.send(myData);
   }
 });
 
 app.get("/IsLogin", (req,res,)=>{
-  console.log("IsLogin");
-  console.log(req.user);
   if(req.isAuthenticated()){
     id = req.user.id;
     res.send(req.user);
@@ -474,13 +474,9 @@ app.get("/IsLogin", (req,res,)=>{
 });
 
 app.get("/IsLoginGoogle", (req,res,)=>{
-  console.log("IsLoginGoogle");
   if(req.isAuthenticated()){
     id = req.user.id;
-    res.redirect("https://project-tracker-8zss.onrender.com/#/Home");
-    // res.redirect("http://localhost:3000");
-  } else {
-    console.log(req.user);
+    res.redirect(development ? "http://localhost:3000/#/Home" : "https://project-tracker-8zss.onrender.com/#/Home");
   }
 });
 
@@ -511,15 +507,14 @@ app.get(
 );
 
 app.get("/IsFailed", (req,res)=>{
-  console.log("IsFailed");
-  console.log(req.isAuthenticated());
   res.send({...req.user, notFound:"No Match"});
 });
 
 app.get("/Logout", (req, res)=>{
   data =[];
   adminData =[];
-  dataOption =[];
+  adminOption =[];
+  clientOption =[];
   setTimeout(()=>{
     req.logout(()=>{
     console.log("User Logout!");
@@ -610,8 +605,8 @@ app.patch("/update", async (req,res)=>{
 
     const received = req.body;
     updateData(received);
-    data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
-    res.send(data);
+    // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
+    res.send("Update saved");
 });
 
 app.delete("/delete", async (req,res)=>{
