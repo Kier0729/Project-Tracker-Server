@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = true;
+const development = false;
 
 env.config();
 
@@ -21,11 +21,8 @@ env.config();
 ////////////////////////////////////////////////////////////
 const corsOptions = {
   // origin: "*",
-  // credentials: true,
   // optionSuccessStatus: 200
-  // origin: "http://localhost:3000",
   origin: development ? "http://localhost:3000" : "https://project-tracker-8zss.onrender.com",
-  // methods: "GET, POST, PATCH, PUT, DELETE",
   credentials: true,
 }
 
