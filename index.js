@@ -17,8 +17,7 @@ const development = true;
 
 env.config();
 
-//commented this because i decided to use proxy
-//Needed to send data // use to link server(node/express) the frontend(react) different
+//Needed to send data // use to link server(node/express) the frontend(react) different origin
 ////////////////////////////////////////////////////////////
 const corsOptions = {
   // origin: "*",
@@ -29,17 +28,6 @@ const corsOptions = {
   // methods: "GET, POST, PATCH, PUT, DELETE",
   credentials: true,
 }
-
-// app.use(function (req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "https://project-tracker-8zss.onrender.com"); // update to match the domain you will make the request from
-//   // res.header("Access-Control-Allow-Origin", "http://localhost:3000");
-//   res.header(
-//       "Access-Control-Allow-Headers",
-//       "Origin, X-Requested-With, Content-Type, Accept"
-//   );
-//   res.header("Access-Control-Allow-Credentials", "true");
-//   next();
-// });
 
 app.use(cors(corsOptions));
 
@@ -329,7 +317,6 @@ passport.use(
   new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  // callbackURL: "http://localhost:4000/auth/google/home",
   callbackURL: development ? "http://localhost:4000/auth/google/home" : "https://project-tracker-server-h8ni.onrender.com/auth/google/home",
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 },  
@@ -343,7 +330,6 @@ passport.use(
     new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    // callbackURL: "http://localhost:4000/auth/facebook/Home",
     callbackURL: development ? "http://localhost:4000/auth/facebook/Home" : "https://project-tracker-server-h8ni.onrender.com/auth/facebook/Home",
     profileFields: ["id","email","name"],
     passReqToCallback: true
@@ -363,6 +349,7 @@ passport.deserializeUser((user, cb) => {
 });
 app.post("/postSelectedItem", (req,res)=>{
   selectedItem = req.body;
+  res.status(200).send("SelectedItem Updated!");
 });
 
 app.get("/fetchOption", (req,res)=>{
@@ -402,7 +389,7 @@ app.post("/postFetchAdminData&Option", async (req,res)=>{
 });
 
 app.get("/fetchAdminOption", async (req,res)=>{
-  res.send({adminOption:adminOption});
+  res.send({adminOption:adminOption, selectedItem});
 });
 
 app.get("/fetchAdmin", async (req,res)=>{
