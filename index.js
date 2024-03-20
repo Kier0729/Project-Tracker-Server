@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = false;
+const development = true;
 
 env.config();
 
@@ -213,7 +213,7 @@ return Promise.all(receieved.id.map( async items =>{
 
 async function fetchAdmin(){
   try{
-    const checkResult = await db.query("SELECT * FROM user_cred ORDER BY id ASC");
+    const checkResult = await db.query("SELECT * FROM user_cred ORDER BY fname ASC");
     let myData;
     if (checkResult.rows.length > 0) { 
       myData = checkResult.rows; 
@@ -356,22 +356,27 @@ app.get("/fetchOption", (req,res)=>{
 app.post("/fetch", async (req,res)=>{
     const {toNavigate, month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
-    if(adminOption.id){
-      adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
-      let myData;
-      myData = await updateDataAdmin(adminOption);
-//either send myData/adminData who has same value  
-    res.send(adminData);
-    }
-    else{
-      if(req.user){
-        clientOption = receieved;
-        data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
-        res.send(data);
-    } else {
+    try {
+      if(adminOption.id){
+        adminOption = {id:adminOption.id, month:month, cycle:cycle, year:year, toNavigate:toNavigate}
+        let myData;
+        myData = await updateDataAdmin(adminOption);
+  //either send myData/adminData who has same value  
+      res.send(adminData);
+      }
+      else{
+        if(req.user){
+          clientOption = receieved;
+          data = await fetchData(receieved);//setting the value of data using fetchData (check fetchData)
+          res.send(data);
+      } else {
+        res.send(null);
+      }
+      }
+    } catch (error) {
       res.send(null);
     }
-    }
+    
 });
 
 //fetch adminData by clicking view // cannot be used besides view button because req.body.id is only present after clicking view button
