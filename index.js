@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = false;
+const development = true;
 
 env.config();
 
@@ -87,6 +87,7 @@ let adminOption = [];
 let clientOption = [];
 let selectedItem = null;
 let year = [];
+let socPop;
 
   async function fetchYear(){
     let myData=[];
@@ -344,6 +345,15 @@ passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
 });
+
+app.post("/SocPop", (req,res)=>{
+  socPop = req.body.socPop;
+});
+app.get("/SocPop", (req,res)=>{
+  res.send(socPop);
+  socPop=false;
+});
+
 app.post("/postSelectedItem", (req,res)=>{
   selectedItem = req.body;
   res.status(200).send("SelectedItem Updated!");
