@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = true;
+const development = false;
 
 env.config();
 
@@ -246,6 +246,14 @@ async function checkUser(received){
     return error;
   }
 }
+function changePassword(rcvd){
+    try{
+      db.query("UPDATE user_cred SET user_pass = $1 WHERE id = $2",
+      [rcvd.password, rcvd.id]);
+    } catch (error) {
+      console.log(error.message);
+    }
+}
 
 async function addData(rcvd){
     try{
@@ -344,6 +352,33 @@ passport.serializeUser((user, cb) => {
 passport.deserializeUser((user, cb) => {
   cb(null, user);
   console.log("deserializeUser");
+});
+
+app.post("/ChangePass", (req,res)=>{
+  if(req.isAuthenticated()){
+    const {password, newPassword} = req.body;
+  console.log(req.body);
+  bcrypt.compare(password, req.user.user_pass, (err, result) => {
+    if (err) {
+      //if an error occurs in bcrypt.compare
+      res.status(200).send("Error comparing passwords");
+    } else {
+      if (result) { //PASS authentication
+          bcrypt.hash(newPassword, saltRounds, async (err, hash) => {
+          if (err) {
+            res.status(200).send("Error hashing.")
+          } else {
+            changePassword({password:hash, id:req.user.id})
+            res.status(200).send("Pass")
+          }
+        })
+      } else { //FAIL authentication
+        res.status(200).send("Fail")
+      }
+    }
+  });
+  }
+  
 });
 
 app.post("/SocPop", (req,res)=>{
@@ -509,7 +544,8 @@ app.get("/IsFailed", (req,res)=>{
 });
 
 app.get("/Logout", (req, res)=>{
-  data =[];
+  if(req.isAuthenticated()){
+    data =[];
   adminData =[];
   adminOption =[];
   clientOption =[];
@@ -519,7 +555,8 @@ app.get("/Logout", (req, res)=>{
     req.session.destroy();
     res.clearCookie("cookiename").send(null);//sending back something(null) so .then will execute in frontend
   });
-}, 300);
+  }, 300);
+  }
 });
 
 app.post("/Login", async (req, res) => {
@@ -589,13 +626,15 @@ app.post("/", async (req,res)=>{
   // const {date, merchant, amount} = req.body;
   // data = [...data, {date:date, merchant:merchant, amount:amount}];
   // res.send(data);
-  const received = req.body;
+  if(req.isAuthenticated()){
+    const received = req.body;
   try {
     addData(received);
     // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)   
     res.send("Saved Successfully!");
   } catch (error) {
     res.send(error.message);
+  }
   }
 });
 
