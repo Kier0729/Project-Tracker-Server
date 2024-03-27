@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = false;
+const development = true;
 
 env.config();
 
@@ -354,6 +354,27 @@ passport.deserializeUser((user, cb) => {
   console.log("deserializeUser");
 });
 
+app.post("/ResetPassword", (req,res)=>{
+  if(req.isAuthenticated()){
+    const newPassword = req.body.password
+    const id = req.body.id
+    try {
+      bcrypt.hash(newPassword, saltRounds, async (err, hash) => {
+        if (err) {
+          res.status(200).send("Fail")
+        } else {
+          db.query("UPDATE user_cred SET user_pass = $1 WHERE id = $2",
+          [hash, id]);
+          res.status(200).send("Success")
+        }
+      })
+      
+    } catch (error) {
+      res.status(200).send("Fail")
+    }
+  }
+});
+
 app.post("/ChangePass", (req,res)=>{
   if(req.isAuthenticated()){
     const {password, newPassword} = req.body;
@@ -399,6 +420,7 @@ app.get("/fetchOption", (req,res)=>{
 });
 
 app.post("/fetch", async (req,res)=>{
+  if(req.isAuthenticated()){
     const {toNavigate, month, cycle, year} = req.body;
     const receieved = {month:month, cycle:cycle, year:year};
     try {
@@ -421,7 +443,7 @@ app.post("/fetch", async (req,res)=>{
     } catch (error) {
       res.send(null);
     }
-    
+  }
 });
 
 //fetch adminData by clicking view // cannot be used besides view button because req.body.id is only present after clicking view button
@@ -642,6 +664,7 @@ app.patch("/update", async (req,res)=>{
     // const {id,date,merchant,amount} = req.body;
     // data.splice(id,1,{date: date, merchant: merchant, amount: amount});
     // res.send(data);
+    if(req.isAuthenticated()){
     const received = req.body;
   try {
     updateData(received);
@@ -650,6 +673,7 @@ app.patch("/update", async (req,res)=>{
   } catch (error) {
     res.send(error.message);
   }
+}
 });
 
 app.delete("/delete", async (req,res)=>{
@@ -657,6 +681,7 @@ app.delete("/delete", async (req,res)=>{
     // //req.body should be declared in axios.delete under an object named(always as "data") Check App.js under handelDelete
     // data = data.filter(function(item, index){return(index != id)});
     // res.send(data);
+    if(req.isAuthenticated()){
     const received = req.body;
   try {
     deleteData(received);
@@ -665,6 +690,7 @@ app.delete("/delete", async (req,res)=>{
   } catch (error) {
     res.send(error.message);
   }
+}
 });
 ////////////////////////////////////////////////////////
 
