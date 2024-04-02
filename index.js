@@ -375,6 +375,30 @@ app.post("/ResetPassword", (req,res)=>{
   }
 });
 
+app.post("/DeleteAccount", (req,res)=>{
+  if(req.isAuthenticated()){
+    const id = req.body.id
+    try {
+          db.query(
+            `DELETE 
+            FROM user_entry
+            WHERE entry_id = $1`,
+            [id]
+            )
+            db.query(
+              `DELETE 
+              FROM user_cred
+              WHERE id = $1`,
+              [id]
+              )
+          res.status(200).send("Success")
+ 
+    } catch (error) {
+      res.status(200).send("Fail")
+    }
+  }
+});
+
 app.post("/ChangePass", (req,res)=>{
   if(req.isAuthenticated()){
     const {password, newPassword} = req.body;
