@@ -13,7 +13,7 @@ import FacebookStrategy from "passport-facebook";
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = true;
+const development = false;
 
 env.config();
 
