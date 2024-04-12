@@ -399,11 +399,13 @@ app.post("/DeleteAccount", (req,res)=>{
   }
 });
 
-app.post("/ChangePass", (req,res)=>{
+app.post("/ChangePass", async (req,res)=>{
   if(req.isAuthenticated()){
     const {password, newPassword} = req.body;
-  console.log(req.body);
-  bcrypt.compare(password, req.user.user_pass, (err, result) => {
+    const result = await db.query("SELECT * FROM user_cred WHERE user_email = $1", [
+      req.user.user_email,
+    ]);
+  bcrypt.compare(password, result.rows[0].user_pass, (err, result) => {
     if (err) {
       //if an error occurs in bcrypt.compare
       res.status(200).send("Error comparing passwords");
@@ -705,8 +707,10 @@ app.delete("/delete", async (req,res)=>{
     // //req.body should be declared in axios.delete under an object named(always as "data") Check App.js under handelDelete
     // data = data.filter(function(item, index){return(index != id)});
     // res.send(data);
+    
     if(req.isAuthenticated()){
     const received = req.body;
+    console.log("Authenticated")
   try {
     deleteData(received);
     // data = await fetchData({month:received.month, cycle:received.cycle, year:received.year});//setting the value of data using fetchData (check fetchData)
