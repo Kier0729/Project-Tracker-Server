@@ -1,5 +1,5 @@
 In index.js change the variable "development" to:
 
-For deployment: false
+For deployment change it to: false
 
-For development: true
+For development change it to: true
