@@ -9,12 +9,12 @@ import { Strategy } from "passport-local";
 import env from "dotenv";
 import GoogleStrategy from "passport-google-oauth2";
 import FacebookStrategy from "passport-facebook";
-import postgres from "postgres"
+// import postgres from "postgres"
 
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = true;
+const development = false;
 
 env.config();
 
