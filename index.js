@@ -628,7 +628,7 @@ app.get("/Logout", (req, res)=>{
 
 app.post("/Login", async (req, res) => {
   setTimeout(async() => {
-    const result = await db.query("SELECT * FROM user_cred WHERE user_email = $1", [
+    const result = await db.query(`SELECT * FROM user_cred WHERE user_email = $1`, [
       req.body.username,
     ]);
     if (result.rows.length > 0) {
