@@ -110,19 +110,24 @@ let socPop;
 
   async function fetchYear(){
     let myData=[];
+    //TRY
+    try {
       return Promise.all(adminOption.id.map(async items =>{
-      const result = await db.query(
-        `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
-        FROM user_entry 
-        WHERE entry_id = $1  
-        ORDER BY date DESC`, [items]
-        );
-          result.rows.forEach(items =>{
-          year.push(items.date);
-        })
-        return year;
-    })
-    )
+        const result = await db.query(
+          `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
+          FROM user_entry 
+          WHERE entry_id = $1  
+          ORDER BY date DESC`, [items]
+          );
+            result.rows.forEach(items =>{
+            year.push(items.date);
+          })
+          return year;
+      })
+      )
+    } catch (error) {
+      console.log(error.message)
+    }
   }
 
 //to check if the selected user has data saved in the database
@@ -525,42 +530,47 @@ if(req.user){
 });
 
 app.get("/year", async (req,res)=>{
-  if(!adminOption.id){
-    let year;
-    year = await db.query(
-    `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
-    FROM user_entry 
-    WHERE entry_id = $1  
-    ORDER BY date DESC`, [id]
-    );
-    let myData=[];
-      year.rows.forEach((items) => { //transferring each row data to myData array
-      myData.push(items.date);
-      });
-    res.send(myData);
-  } 
-  else {
-    let data = [];
-    let myData = [];
-    year = [];
-    data = await fetchYear();
-    
-    year = year.sort();
-    year = year.reverse();
-    if(year.length > 1){
-      let y = 1;
-      for(let x=0; x < year.length; x++){
-        year[x] != year[y] && myData.push(year[x]);
-        if (y == year.length-1) { 
-          myData.push(year[y]);
-          x++;
-        }
-        else if (y < year.length-1){y++}     
+  //TRY
+  try {
+    if(!adminOption.id){
+      let year;
+      year = await db.query(
+      `SELECT DISTINCT TO_CHAR(entry_date, 'YYYY') AS date
+      FROM user_entry 
+      WHERE entry_id = $1  
+      ORDER BY date DESC`, [id]
+      );
+      let myData=[];
+        year.rows.forEach((items) => { //transferring each row data to myData array
+        myData.push(items.date);
+        });
+      res.send(myData);
+    } 
+    else {
+      let data = [];
+      let myData = [];
+      year = [];
+      data = await fetchYear();
+      
+      year = year.sort();
+      year = year.reverse();
+      if(year.length > 1){
+        let y = 1;
+        for(let x=0; x < year.length; x++){
+          year[x] != year[y] && myData.push(year[x]);
+          if (y == year.length-1) { 
+            myData.push(year[y]);
+            x++;
+          }
+          else if (y < year.length-1){y++}     
+      }
+      } else {
+        myData.push(year);
+      }
+      res.send(myData);
     }
-    } else {
-      myData.push(year);
-    }
-    res.send(myData);
+  } catch (error) {
+    console.log(error.message)
   }
 });
 
