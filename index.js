@@ -9,11 +9,12 @@ import { Strategy } from "passport-local";
 import env from "dotenv";
 import GoogleStrategy from "passport-google-oauth2";
 import FacebookStrategy from "passport-facebook";
+import postgres from "postgres"
 
 const app = express();
 const port = 4000;
 const saltRounds = 10;
-const development = false;
+const development = true;
 
 env.config();
 
@@ -63,14 +64,32 @@ if (!development){
 app.use(passport.initialize());
 app.use(passport.session());
 
+//connection for render DB
+// const db = new pg.Client({
+//     user: process.env.PG_USER,
+//     host: process.env.PG_HOST,
+//     database: process.env.PG_DATABASE,
+//     password: process.env.PG_PASSWORD,
+//     port: process.env.PG_PORT,
+//     connectionString: process.env.DB_CONNECTION_STRING,// needed for remote db connection
+//   });
+//////////////////////////////////////////
+
+//connection for neon.tech db
+let { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, DB_CONNECTION_STRING } = process.env;
+
 const db = new pg.Client({
-    user: process.env.PG_USER,
-    host: process.env.PG_HOST,
-    database: process.env.PG_DATABASE,
-    password: process.env.PG_PASSWORD,
-    port: process.env.PG_PORT,
-    connectionString: process.env.DB_CONNECTION_STRING,// needed for remote db connection
-  });
+  host: PGHOST,
+  database: PGDATABASE,
+  username: PGUSER,
+  password: PGPASSWORD,
+  port: 5432,
+  connectionString:DB_CONNECTION_STRING,
+  // connection: {
+  //   options: `project=${ENDPOINT_ID}`,
+  // },
+});
+////////////////////////////////
 
 db.connect();
 
